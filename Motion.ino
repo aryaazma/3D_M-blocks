@@ -119,7 +119,6 @@ int wait_and_detect_difference()
  delay(50);
  AcX_c_old = AcX_c; AcY_c_old = AcY_c; AcZ_c_old = AcZ_c;
  delay(5);
- read_accel_central();
 // Serial.println(AcX_c_old); 
 // Serial.println(AcX_c);
 // Serial.println(AcY_c_old);

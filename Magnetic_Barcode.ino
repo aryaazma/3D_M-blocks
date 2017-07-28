@@ -8,7 +8,7 @@
 //Face 1    2546           90  -- 180
 //Face 2    2546
 //Face 3    2546
-//Face 4    1234
+//Face 4    1234f
 //Face 5    1234
 //Face 6    1234
 //Face 1    1234           90  -- 180
@@ -26,11 +26,14 @@
 //int mag___values_array[12]        = {0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0};
 //int angle_values_array[12]        = {0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0};
 //int signed_angle_values_array[12] = {0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0};
+
 void process_5048()
 {
   for(int face = 1; face < 7; face++)
     {
-      check_5048b(face);// angle1 angle2 mag1 mag2 signed_angle1...2... are now updated for face [face]
+      check_and_process_mag_sensors(face);// angle1 angle2 mag1 mag2 signed_angle1...2... are now updated for face [face]
+      int angle1 = angle_values_array[face*2-2];
+      int angle2 = angle_values_array[face*2-1];
       // Produces the following:
       // mag_digit_1 = 0; -+ 1 to 30 or 0 if no face
       // mag_digit_2 = 0; -+ 1 to 30 or 0 if no face
@@ -39,11 +42,11 @@ void process_5048()
       //angle1 = read_5048_angle(address1)/45.5;    delay(10);
       //mag2 = read_5048_agc(address2);             delay(3);
       //angle2 = read_5048_angle(address2)/45.5;    delay(10);
-        if(mag1 > 0 || mag2 > 0)
-          {
-            Serial.print("mag_digit_1: "); Serial.print(mag_digit_1); Serial.print("    ");  Serial.print("ANGLE1: "); Serial.println(angle1); 
-            Serial.print("mag_digit_2: "); Serial.print(mag_digit_2); Serial.print("    ");  Serial.print("ANGLE2: "); Serial.println(angle2);
-          }
+//        if(mag1 > 0 || mag2 > 0)
+//          {
+//            Serial.print("mag_digit_1: "); Serial.print(mag_digit_1); Serial.print("    ");  Serial.print("ANGLE1: "); Serial.println(angle1); 
+//            Serial.print("mag_digit_2: "); Serial.print(mag_digit_2); Serial.print("    ");  Serial.print("ANGLE2: "); Serial.println(angle2);
+//          }
           
            if(magnetic_neighbors_most_recent[face] > 1 && magnetic_neighbors[face] == 0)                    {face_rgb(face,0,0,0,1);} // turns off LED's if no longer connected
            
@@ -60,30 +63,30 @@ void process_5048()
       else if(magnetic_neighbors[face] > 1 && angle1 > 300 && angle2 > 300)                                 {face_rgb(face,1,1,0,1);} // yellow
       else if(magnetic_neighbors[face] > 1)                                                                 {face_rgb(face,1,1,0,1);} //cmd = "rain";} // yellow
       magnetic_neighbors_most_recent[face] = magnetic_neighbors[face]; // shift the time value by one step
-      delay(100);
-      if(!SIMPLE_TEST_LOOP_ENABLED){Serial.println("stillalive");}
     }
 }
 
 void check_5048_frame()
-  {
+{
   mag4 = read_5048_agc(address4);             delay(3);
   angle4 = read_5048_angle(address4)/45.5;    delay(10);
   if(mag4 >= 255) {signed_angle4 = angle4*(-1);}  else{signed_angle4 = angle4;}
-  }
+}
 
-void check_5048b(int face) // This function updates a bunch of variables for the magnetic connections
+
+void check_and_process_mag_sensors(int face) // This function updates a bunch of variables for the magnetic connections
 {
-  IRLED(face,1,0,1,0);                        delay(10); // Turns on the power to the 5048B sensors on face _face_
-  
-  mag1 = read_5048_agc(address1);             delay(3);  // reads the value of the magnetic field strength for sensor_1
-  angle1 = read_5048_angle(address1)/45.5;    delay(10); // reads the ANGLE value for sensor_1 - converts from 14 Bit to an integer in degrees.
-  mag2 = read_5048_agc(address2);             delay(3);  // reads the value of the magnetic field strength for sensor_2
-  angle2 = read_5048_angle(address2)/45.5;    delay(10); // reads the ANGLE value for sensor_2 - converts from 14 Bit to an integer in degrees.
+  int mag_digit_1 = 0;
+  int mag_digit_2 = 0;
+  int signed_angle1;
+  int signed_angle2;
 
-
+  int mag1 = read_5048_agc(address1);             delay(3);  // reads the value of the magnetic field strength for sensor_1
+  int angle1 = read_5048_angle(address1)/45.5;    delay(10); // reads the ANGLE value for sensor_1 - converts from 14 Bit to an integer in degrees.
+  int mag2 = read_5048_agc(address2);             delay(3);  // reads the value of the magnetic field strength for sensor_2
+  int angle2 = read_5048_angle(address2)/45.5;    delay(10); // reads the ANGLE value for sensor_2 - converts from 14 Bit to an integer in degrees.
 ////{ These two blocks of code "digitize" the magnet readings into numbers from -30 to +30 and with 0 being an error, +1-30 representing digits with measureable 
-//// strength in the magnetic field (We are confident we the sensor is reading an actual magnet) while -1-30 represents a digitized angle reading where we are NOT
+//// strength in the magnetic field (We are confident the sensor is reading an actual magnet) while -1-30 represents a digitized angle reading where we are NOT
 //// condifent that the magnet is an actual magnet...
         if (mag1 == 0)                      {mag_digit_1 = 0;}
    else if (angle1 < 6 || angle1 > 354)     {mag_digit_1 = 1;}
@@ -92,16 +95,13 @@ void check_5048b(int face) // This function updates a bunch of variables for the
         if (mag2 == 0)                      {mag_digit_2 = 0;}
    else if(angle2 < 6 || angle2 > 354)      {mag_digit_2 = 1;}  
    else                                     {mag_digit_2 = int(angle2 + 18)/12;}
-////} 
 
   if(mag1 >= 255) {signed_angle1 = angle1*(-1); mag_digit_1 = mag_digit_1*(-1);}  else{signed_angle1 = angle1;}
   if(mag2 >= 255) {signed_angle2 = angle2*(-1); mag_digit_2 = mag_digit_2*(-1);}  else{signed_angle2 = angle2;}
-  if(mag1 == 0 || mag2 == 0) {mag1 = 0; mag2 = 0; magnetic_neighbors[face] = 0;}
+  if(mag1 == 0 || mag2 == 0) {mag1 = 0; mag2 = 0; magnetic_neighbors[face] = 0; error_flag = 1;}
   
      else if((mag1 < 255 && mag1 > 0) && (mag2 < 255 && mag2 > 0)) // If precense of both BOTH magnets are detected, magnetic_neighbors[face] entry holds a 2
           {
-            //Serial.print("Connected to Something!");  
-            //Serial.print("ANGLES: "); Serial.print(angle1); Serial.print("    "); Serial.print(angle2); Serial.println("    ");
             magnetic_neighbors[face] = 2;
           }
      else if(mag1 < 255 || mag2 < 255) 
@@ -110,7 +110,7 @@ void check_5048b(int face) // This function updates a bunch of variables for the
           {
             magnetic_neighbors[face] = 0;
           }
-          
+ /// UPDATE Global arrays - indexed by (face*2-2) and (face*2-1)   
   mag___values_array[face*2-2]          = mag1;
   mag___values_array[face*2-1]          = mag2;
   mag_digit_array[face*2-2]             = mag_digit_1;
@@ -119,11 +119,6 @@ void check_5048b(int face) // This function updates a bunch of variables for the
   angle_values_array[face*2-1]          = angle2;
   signed_angle_values_array[face*2-2]   = signed_angle1;
   signed_angle_values_array[face*2-1]   = signed_angle2;
-  
-  delay(5); // TURNS off the current LED
-  IRLED(face,0,0,0,0); // TURNS off the current LED
-  delay(10); // TURNS off the current LED
-  IRLED(face,0,0,0,0); // TURNS off the current LED
 }
 
 

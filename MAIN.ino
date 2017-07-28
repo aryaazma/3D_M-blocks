@@ -1,4 +1,36 @@
-//esp//////////////////////////////////////////////////////////////////////////////////////////////
+
+void simple_test_loop()
+{
+  int simple_loop_counter = 0;
+  digitalWrite(Switch, HIGH);
+  delay(500);
+  digitalWrite(LED, HIGH);
+//  for(int i = 0; i< 10; i++)
+//  {
+//    int value = read_gyro_and_accel(MPU_addr2);
+//    if(value > 4000) {simple_loop_counter = 10000;}
+//    Serial.println(value);
+//    delay(300);
+//  }
+  while(simple_loop_counter < 10000) //Serial.available() == 0)
+  {
+     Serial.println("stillalive");
+     process_5048();
+     Serial.println(read_gyro_and_accel(MPU_parasite));
+     Serial.println(read_gyro_and_accel(MPU_frame));
+     digitalWrite(LED, HIGH);
+     delay(50);
+     digitalWrite(LED, LOW); 
+     delay(50);
+     digitalWrite(LED, HIGH);
+     delay(50);
+     digitalWrite(LED, LOW); 
+     delay(500);
+  }
+}
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////// BEGIN MAIN LOOP///////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -12,7 +44,7 @@ int loop_counter            = 0;
 ////////////////////////////////////////////////
 void loop()
 {
-  if(true)                   { things_to_do_as_fast_as_possible(); } // happens as fast as possible
+  things_to_do_as_fast_as_possible(); // happens as fast as possible
   if(millis() > quick_timer) { things_to_do_at_fast_rate_______(); } // happens roughly every 100 ms
   if(millis() > slow_timer)  { things_to_do_at_slow_rate_______(); } // happens roughly every 1000 ms
 }
@@ -25,17 +57,14 @@ void essentials_of_fast_things()
    x10xfast_loop_counter++; quick_timer = millis() + quick_timer_length; // Deal with updating loop timer
    shift_and_update_IMU();
    shift_and_update_lights();
-   state_counter--;
 }
 
 void  things_to_do_at_fast_rate_______()
 {
   essentials_of_fast_things();
   if(is_ros_on){process_general_ros();}
-  check_for_action_slow();
   move_counter--; 
   light_tracking_delay_counter--;
-  state_counter--;
   
        if(demo == "light_track" && ambient_values[face_that_is_up][0] > 3)       {light_track_update();}
   else if(demo == "show_brightest")                                              {display_brightest_face();}
@@ -48,16 +77,10 @@ void  things_to_do_at_fast_rate_______()
 void essentials_of_slow_things()
 {
   loop_counter++; 
-  check_5048_frame();
   Serial.println("stillalive"); // general upkeep work...
-  process_5048();
   slow_timer = millis() + slow_timer_length+random(50);                 // Deal with updating loop timer
-  shift_and_update_ambient_sensors();
-  delay(5);
-  publish_neighbor_info();
+  if(is_ros_on){publish_neighbor_info(); publishAwake();}
   if(DEBUG)                                                             {Serial.print("loop_counter = "); Serial.println(loop_counter);}
-  //if(motion_sum_log[0] == 0 && motion_sum_log[3] == 0)                  {attempt_reset_i2c(); for(int i = 0; i< 3; i++){Serial.println("esprst"); delay(40);}}
-  if(is_ros_on)                                                         {publishAwake();}  
   if(loop_counter % 19 == 0)                                            {fbrxen(true);}
 }
 
@@ -67,10 +90,10 @@ void things_to_do_at_slow_rate_______()
   essentials_of_slow_things();
   if(DEBUG && loop_counter % 5){Serial.print(cmd);Serial.println(" is the current cmd");}
     ///////////////////////////////////////////////demos///////////////////////////////////////////////
-       if(demo == "light_track_part_2" && countdown_demo > 0)   {light_track_update_part_2();}
-  else if(demo == "roll_to_plane" && countdown_demo > 0)        {roll_to_plane();}
-  else if(demo == "ready_set_jump" && countdown_demo > 0)       {ready_set_jump();}
-  else if(demo == "find_connections" && countdown_demo > 0)     
+       if(demo == "light_track_part_2")    {light_track_update_part_2();}
+  else if(demo == "roll_to_plane")        {roll_to_plane();}
+  else if(demo == "ready_set_jump")       {ready_set_jump();}
+  else if(demo == "find_connections")     
     {
     Serial.println("yo!");
     }
@@ -124,27 +147,7 @@ void reset_face_neighbors()
   print_out_connections();
 }
 
-void print_out_connections()
-{
-  Serial.println("__________________");
-  Serial.print("HI! I am cube number: "); Serial.println(cube_id);
-  //
-  for(int face = 1; face < FACES; face++)
-  {
-    
-    Serial.print(" face: ");
-    Serial.print(face);
-    Serial.print(" is connected to cube");
-    Serial.print(face_neighbors[face][n_cube_id]);
-    Serial.print(" face ");
-    Serial.print(face_neighbors[face][n_face_id]);
-    //Serial.print(" face ");
-    //Serial.print(face_neighbors[face][n_face_id]);
-    Serial.println(" WOOOOOOO!");
-    
-  }
-  Serial.println("__________________");
-}
+
 void reset_esp()
 {
   Serial.println("esprst");
@@ -161,42 +164,6 @@ void shift_and_update_lights()
    blink_white();
    blink_ir();
    blink_ir_face();
-}
-
-void shift_and_update_ambient_sensors()
-{
-   for(int face = 1; face < ACTIVE_FACES; face++)
-   {
-      for(int j = ARRAY_LENGTH_LONG-1; j > 0; j--){ambient_values[face][j] = ambient_values[face][j-1];}
-      ambient_values[face][0] = read_ambient(face); 
-   }
-}
-
-void shift_and_update_IMU()
-{
-  for(int j = ARRAY_LENGTH_LONG;  j > 0; j--){motion_sum_log[j] = motion_sum_log[j-1];}  motion_sum_log[0] = read_gyro_and_accel(MPU_addr1); 
-  for(int j = ARRAY_LENGTH_SHORT; j > 0; j--){GyX_log[j] = GyX_log[j-1];}  GyX_log[0] = GyX;
-  for(int a = ARRAY_LENGTH_SHORT; a > 0; a--){GyY_log[a] = GyY_log[a-1];}  GyY_log[0] = GyY;
-  for(int b = ARRAY_LENGTH_SHORT; b > 0; b--){GyZ_log[b] = GyZ_log[b-1];}  GyZ_log[0] = GyZ;
-  for(int j = ARRAY_LENGTH_SHORT; j > 0; j--){AcX_log[j] = AcX_log[j-1];}  AcX_log[0] = AcX;
-  for(int j = ARRAY_LENGTH_SHORT; j > 0; j--){AcY_log[j] = AcY_log[j-1];}  AcY_log[0] = AcY;
-  for(int j = ARRAY_LENGTH_SHORT; j > 0; j--){AcZ_log[j] = AcZ_log[j-1];}  AcZ_log[0] = AcZ;
-}
-
-String check_for_patterns_gyros()
-{
-int low = 1200;
-int high = 5000;
-String color = "default";
-///////////////////////////////////////THESE represent rolling about 3 axis...
-     if(motion_sum_log[1] > 15000 && motion_sum_log[8] > 15000 && motion_sum_log[17] > 15000)                                           {color = "angry";cmd = "chill";}
-     if(GyX_log[0] > low && GyX_log[0] < high && GyX_log[3] > low && GyX_log[3] < high && GyX_log[8] > low && GyX_log[8] < high)        {color = "y"; y_counter = 4;}
-else if(GyX_log[0] < -low && GyX_log[0] > -high && GyX_log[3] < -low && GyX_log[3] > -high &&GyX_log[8] < -low && GyX_log[8] > -high)   {color = "p"; p_counter = 4;}
-else if(GyY_log[0] > low && GyY_log[0] < high && GyY_log[3] > low&& GyY_log[3] < high &&GyY_log[8] > low && GyY_log[8] < high)          {color = "r"; r_counter = 4;}
-else if(GyY_log[0] < -low && GyY_log[0] > -high && GyY_log[3] < -low && GyY_log[3] > -high &&GyY_log[8] < -low && GyY_log[8] > -high)   {color = "b"; b_counter = 4;}
-else if(GyZ_log[0] > low && GyZ_log[0] < high && GyZ_log[3] > low && GyZ_log[3] < high &&GyZ_log[8] > low && GyZ_log[8] < high)         {color = "t"; t_counter = 4;}
-else if(GyZ_log[0] < -low && GyZ_log[0] > -high && GyZ_log[3] < -low && GyZ_log[3] > -high &&GyZ_log[8] < -low && GyZ_log[8] > -high)   {color = "g"; g_counter = 4;}
-return(color);
 }
 
 void attempt_reset_i2c()
@@ -231,9 +198,11 @@ void things_to_do_as_fast_as_possible()
       
 }
 
-void check_for_action_slow()
+
+
+void check_for_commands()
 {
-      if(cmd == "find_connections")               {reset_face_neighbors(); demo = "find_connections"; cmd = "chill"; countdown_demo = 30; Serial.println("Demo reset");} 
+      if(cmd == "find_connections")               {reset_face_neighbors(); demo = "find_connections"; cmd = "chill"; Serial.println("Demo reset");} 
       if(cmd == "f1")                             {cmd = "chill";}
       if(cmd == "f2")                             {cmd = "chill";}
       if(cmd == "lit")                            {face_rgb(which_face_is_up(12000),1,0,1,0);}
