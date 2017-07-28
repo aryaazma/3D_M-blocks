@@ -1,6 +1,3 @@
-////////////////// 2017-07-23 ///
-//// General Information
-
 // HOMW MAGNET POSITION for rotation: 238 = 1234
 #define DEBUG                               0 // Setting this to 1 generates lots of debug messages
 #define IS_ROS_ON_AT_BEGIN                  0
@@ -315,16 +312,10 @@ int look_up_offset_values() // this function looks up the cube-specific offset v
 
 void setupSensors_and_coms()
 {
-  delay(200);
   pinMode(LED,    OUTPUT);
   pinMode(Switch, OUTPUT);
-  delay(5);
+  delay(200);
   digitalWrite(Switch, LOW);
-  delay(200);
-  digitalWrite(LED, HIGH);
-  delay(200);
-  digitalWrite(LED, LOW); 
-  delay(200);
   digitalWrite(LED, HIGH);
   delay(200);
   digitalWrite(LED, LOW); 

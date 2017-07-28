@@ -1,3 +1,5 @@
+// needs rewriting -- jr
+
 void change_plane_to_parallel(int plane)
 {
   if(plane == 5 || plane == 6){cmd = "cp5";}
@@ -8,12 +10,13 @@ void change_plane_to_parallel(int plane)
 bool go_to_plane(int desired_plane)
 {
 //STEP 0: Initialize variables, check if we are already in correct plane...
-    int lattice_connected = 0;
-    int up_face = which_face_is_up(12000);
+
     face_that_was_last_up = up_face;
+    int up_face = which_face_is_up(12000);
     int current_plane = which_plane_fast();
     if(current_plane == desired_plane){return(true);}
     
+    int lattice_connected = 0;
 //STEP 1: Check to see if we are attached to a lattice...
     // Perform Wiggle Test --- IF NOT RETURN: also look if face_that_is_up changed... RETURN IF SO
     if(current_plane > 1000)
